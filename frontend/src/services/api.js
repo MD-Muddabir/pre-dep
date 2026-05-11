@@ -68,7 +68,9 @@ api.interceptors.request.use(
             
             // Check for plan expiration blocking mutating requests locally
             const isPlanExpired = sessionStorage.getItem("isPlanExpired") === "true";
-            if (isPlanExpired && config.method && config.method.toUpperCase() !== 'GET') {
+            // === LIFETIME BYPASS: Lifetime members are never blocked ===
+            const isLifetimeMember = sessionStorage.getItem("isLifetimeMember") === "true";
+            if (isPlanExpired && !isLifetimeMember && config.method && config.method.toUpperCase() !== 'GET') {
                 const url = config.url || '';
                 // Whitelist routes that shouldn't be blocked even if expired (e.g. auth, upgrade)
                 const isWhitelisted = url.includes('/auth/') || url.includes('/login') || url.includes('/checkout') || url.includes('/verify') || url.includes('/payment');

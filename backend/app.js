@@ -2,24 +2,49 @@
  * Main Application File
  * Configures Express server with middleware, routes, and error handling
  * Implements multi-tenant SaaS architecture for coaching institutes
- * âœ… Phase 1: Compression, Rate Limiting, Optimized CORS
- * âœ… Phase 6: Performance Monitoring
+ * ✅ Phase 1: Compression, Rate Limiting, Optimized CORS
+ * ✅ Phase 6: Performance Monitoring
+ * ✅ Phase 7: Security Hardening (Helmet, XSS, OTP Rate Limiting)
  */
 
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-const compression = require("compression");               // âœ… Phase 1.2
-const rateLimit = require("express-rate-limit");          // âœ… Phase 1.4
-const performanceLogger = require("./middlewares/performance.middleware"); // âœ… Phase 6.1
+const compression = require("compression");               // ✅ Phase 1.2
+const rateLimit = require("express-rate-limit");          // ✅ Phase 1.4
+const helmet = require("helmet");                         // ✅ Phase 7: HTTP Security Headers
+const performanceLogger = require("./middlewares/performance.middleware"); // ✅ Phase 6.1
 require("dotenv").config();
 
 const app = express();
 
 // ============================================
-// âœ… PHASE 1.2: RESPONSE COMPRESSION
+// ✅ PHASE 7: HTTP SECURITY HEADERS (HELMET)
 // ============================================
-// Compress all HTTP responses â€” reduces payload size by ~70%
+// Adds 11 security headers: X-Content-Type-Options, X-Frame-Options,
+// Strict-Transport-Security, X-XSS-Protection, CSP, and more.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://api.razorpay.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://*.cloudinary.com", "blob:"],
+      connectSrc: ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com", process.env.FRONTEND_URL].filter(Boolean),
+      frameSrc: ["https://api.razorpay.com", "https://checkout.razorpay.com"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: process.env.NODE_ENV === "production" ? [] : null,
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow Cloudinary images to load
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow CDN resources
+}));
+
+// ============================================
+// ✅ PHASE 1.2: RESPONSE COMPRESSION
+// ============================================
+// Compress all HTTP responses — reduces payload size by ~70%
 app.use(compression({
   level: 6,           // Compression level (0-9): 6 is best speed/size balance
   threshold: 1024,    // Only compress responses > 1KB
@@ -30,12 +55,37 @@ app.use(compression({
 }));
 
 // ============================================
-// âœ… PHASE 6.1: PERFORMANCE MONITORING
+// ✅ PHASE 6.1: PERFORMANCE MONITORING
 // ============================================
 app.use(performanceLogger);
 
 // ============================================
-// âœ… PHASE 1.4: RATE LIMITING
+// ✅ PHASE 7: XSS SANITIZATION MIDDLEWARE
+// ============================================
+// Recursively sanitize all string fields in req.body, req.query, req.params
+// to prevent stored XSS attacks from user-submitted content.
+const xss = require("xss");
+const sanitizeObject = (obj) => {
+  if (typeof obj === "string") return xss(obj);
+  if (Array.isArray(obj)) return obj.map(sanitizeObject);
+  if (obj && typeof obj === "object") {
+    const clean = {};
+    for (const [key, value] of Object.entries(obj)) {
+      clean[key] = sanitizeObject(value);
+    }
+    return clean;
+  }
+  return obj;
+};
+app.use((req, res, next) => {
+  if (req.body && typeof req.body === "object") req.body = sanitizeObject(req.body);
+  if (req.query && typeof req.query === "object") req.query = sanitizeObject(req.query);
+  if (req.params && typeof req.params === "object") req.params = sanitizeObject(req.params);
+  next();
+});
+
+// ============================================
+// ✅ PHASE 1.4: RATE LIMITING
 // ============================================
 // Global rate limiter: 200 requests per 15 minutes per IP
 const globalLimiter = rateLimit({
@@ -43,7 +93,7 @@ const globalLimiter = rateLimit({
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: "Too many requests â€” please try again later." },
+  message: { success: false, message: "Too many requests — please try again later." },
   skip: (req) => req.ip === "127.0.0.1" || req.ip === "::1", // Don't limit localhost
 });
 app.use("/api/", globalLimiter);
@@ -55,12 +105,27 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: "Too many login attempts â€” please wait 15 minutes." },
+  message: { success: false, message: "Too many login attempts — please wait 15 minutes." },
 });
 app.use("/api/auth/login", authLimiter);
 
+// ✅ Phase 7: OTP-specific rate limiter — 5 attempts per 15 minutes per IP
+// Prevents brute-force of 6-digit OTP codes (1M combinations)
+const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many OTP attempts — please wait 15 minutes before trying again." },
+});
+app.use("/api/auth/register-init", otpLimiter);
+app.use("/api/auth/verify-registration", otpLimiter);
+app.use("/api/auth/forgot-password", otpLimiter);
+app.use("/api/auth/reset-password", otpLimiter);
+app.use("/api/auth/resend-otp", otpLimiter);
+
 // ============================================
-// âœ… PHASE 1.3: OPTIMIZED CORS CONFIGURATION
+// ✅ PHASE 1.3: OPTIMIZED CORS CONFIGURATION
 // ============================================
 
 /**
@@ -133,16 +198,66 @@ if (!isCloudinaryReady) {
 // ============================================
 
 /**
- * Health Check Endpoint
+ * Health Check Endpoint (Simple)
  * Returns server status
  */
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message: "ðŸŽ“ ZF Solution API is running",
-    version: "1.0.0",
+    message: "🎓 ZF Solution API is running",
+    version: "1.1.5",
     timestamp: new Date().toISOString(),
   });
+});
+
+/**
+ * ✅ Phase 7: Production Health Check Endpoint
+ * Deep health check — verifies DB connectivity, Redis status, memory usage.
+ * Use this for uptime monitoring (Better Uptime, Railway health checks).
+ */
+app.get("/api/health", async (req, res) => {
+  const startTime = Date.now();
+  const health = {
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    version: "1.1.5",
+    checks: {},
+  };
+
+  // Database check
+  try {
+    const { sequelize } = require("./models");
+    await sequelize.authenticate();
+    health.checks.database = { status: "ok", latency: `${Date.now() - startTime}ms` };
+  } catch (err) {
+    health.status = "degraded";
+    health.checks.database = { status: "error", message: err.message };
+  }
+
+  // Redis check
+  try {
+    const redis = require("./config/redis");
+    health.checks.redis = {
+      status: redis.isAvailable() ? "ok" : "unavailable",
+      note: redis.isAvailable() ? "Connected" : "Caching disabled (non-critical)",
+    };
+  } catch {
+    health.checks.redis = { status: "unavailable" };
+  }
+
+  // Memory check
+  const memUsage = process.memoryUsage();
+  health.checks.memory = {
+    heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
+    heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`,
+    rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`,
+  };
+
+  health.responseTime = `${Date.now() - startTime}ms`;
+
+  const statusCode = health.status === "ok" ? 200 : 503;
+  res.status(statusCode).json(health);
 });
 
 /**

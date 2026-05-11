@@ -8,11 +8,18 @@ cron.schedule("0 0 * * *", async () => {
 
     const today = new Date();
 
+    // === LIFETIME BYPASS: Do NOT expire lifetime member subscriptions ===
     const expiredSubs = await Subscription.findAll({
         where: {
             end_date: { [Op.lt]: today },
             payment_status: "paid"
-        }
+        },
+        include: [{
+            model: Institute,
+            // Exclude lifetime members — they never expire
+            where: { is_lifetime_member: { [Op.not]: true } },
+            attributes: ['id', 'is_lifetime_member']
+        }]
     });
 
     for (const sub of expiredSubs) {
@@ -31,11 +38,18 @@ cron.schedule("0 9 * * *", async () => {
     const warningDate = new Date();
     warningDate.setDate(warningDate.getDate() + 3);
 
+    // === LIFETIME BYPASS: Do NOT send expiry warnings to lifetime members ===
     const expiringSubs = await Subscription.findAll({
         where: {
             end_date: { [Op.eq]: warningDate.toISOString().split('T')[0] },
             payment_status: "paid"
-        }
+        },
+        include: [{
+            model: Institute,
+            // Exclude lifetime members — they never get expiry warnings
+            where: { is_lifetime_member: { [Op.not]: true } },
+            attributes: ['id', 'email', 'is_lifetime_member']
+        }]
     });
 
     for (const sub of expiringSubs) {

@@ -39,17 +39,26 @@ export const AuthProvider = ({ children }) => {
         const res = await getProfile();
         if (res.data && res.data.success) {
            const userData = res.data.user;
+
+           // === LIFETIME BYPASS: Lifetime members NEVER expire ===
+           const isLifetime = userData.is_lifetime_member ||
+                              userData.Institute?.is_lifetime_member ||
+                              false;
+
            let isExpired = false;
-           
-           const subEnd = userData.subscription_end || userData.Institute?.subscription_end;
-           if (subEnd) {
-               const end = new Date(subEnd);
-               end.setHours(23, 59, 59, 999);
-               if (new Date() > end) isExpired = true;
+           if (!isLifetime) {
+               const subEnd = userData.subscription_end || userData.Institute?.subscription_end;
+               if (subEnd) {
+                   const end = new Date(subEnd);
+                   end.setHours(23, 59, 59, 999);
+                   if (new Date() > end) isExpired = true;
+               }
            }
-           
+
            sessionStorage.setItem("isPlanExpired", isExpired ? "true" : "false");
+           sessionStorage.setItem("isLifetimeMember", isLifetime ? "true" : "false");
            userData.isPlanExpired = isExpired;
+           userData.is_lifetime_member = isLifetime;
 
            // ── Dynamic branding: update with fresh profile data ──
            setBranding(userData);
@@ -75,17 +84,22 @@ export const AuthProvider = ({ children }) => {
 
     const { token, user } = response.data;
 
+    // === LIFETIME BYPASS: Lifetime members NEVER expire ===
+    const isLifetime = user.is_lifetime_member || false;
+
     let isExpired = false;
-    if (user.subscription_end) {
+    if (!isLifetime && user.subscription_end) {
         const end = new Date(user.subscription_end);
         end.setHours(23, 59, 59, 999);
         if (new Date() > end) isExpired = true;
     }
     
     user.isPlanExpired = isExpired;
+    user.is_lifetime_member = isLifetime;
 
     persistSession(token, user);
     sessionStorage.setItem("isPlanExpired", isExpired ? "true" : "false");
+    sessionStorage.setItem("isLifetimeMember", isLifetime ? "true" : "false");
 
     // ── Dynamic branding: save institute branding after login ──
     setBranding(user);

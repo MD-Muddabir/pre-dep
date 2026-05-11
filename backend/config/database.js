@@ -69,7 +69,7 @@ const sequelize = new Sequelize(dbUrl, {
         ...(isLocal ? {} : {
             ssl: {
                 require: true,
-                rejectUnauthorized: false,
+                rejectUnauthorized: true, // ✅ Phase 7: Strict SSL in production (prevents MITM attacks)
             }
         })
     },

@@ -180,6 +180,8 @@ exports.verifyLifetimePayment = async (req, res) => {
             lifetime_purchased_at: new Date(),
             lifetime_plan_id: lifetimePlan.id,
             founding_member: isFoundingMember,
+            subscription_end: null,   // Clear expiry — lifetime members NEVER expire
+            subscription_start: new Date(), // Reset start to activation date
         });
 
         // Increment slot counter
@@ -226,6 +228,8 @@ exports.manualActivateLifetime = async (req, res) => {
             lifetime_purchased_at: new Date(),
             lifetime_plan_id: lifetimePlan?.id || null,
             founding_member: isFoundingMember,
+            subscription_end: null,   // Clear expiry — lifetime members NEVER expire
+            subscription_start: new Date(), // Reset start to activation date
         });
 
         if (lifetimePlan) {

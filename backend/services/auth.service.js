@@ -227,6 +227,9 @@ exports.getProfile = async (userId) => {
     userData.institute_status = user.Institute?.status;
     userData.institute_phone = user.Institute?.phone;
     userData.institute_logo = user.Institute?.logo || null;
+    // Lifetime and subscription fields needed by frontend for expiry checks
+    userData.is_lifetime_member = user.Institute?.is_lifetime_member || false;
+    userData.subscription_end = user.Institute?.subscription_end || null;
     if (!userData.institute_logo) {
         try {
             const publicProfile = await InstitutePublicProfile.findOne({

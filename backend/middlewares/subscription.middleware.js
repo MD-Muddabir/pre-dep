@@ -14,13 +14,17 @@ async function checkSubscription(req, res, next) {
         let subData = subscriptionCache.get(instituteId);
 
         if (!subData || Date.now() - subData.time > 60000) {
-            const institute = await Institute.findByPk(instituteId, { attributes: ['status', 'subscription_end'] });
+            // Fetch is_lifetime_member alongside status and subscription_end
+            const institute = await Institute.findByPk(instituteId, {
+                attributes: ['status', 'subscription_end', 'is_lifetime_member']
+            });
             if (!institute) {
                 return sendError(res, "Institute not found", 404);
             }
 
+            // === LIFETIME BYPASS: Lifetime members NEVER expire ===
             let isExpired = false;
-            if (institute.subscription_end) {
+            if (!institute.is_lifetime_member && institute.subscription_end) {
                 const today = new Date();
                 const end = new Date(institute.subscription_end);
                 end.setHours(23, 59, 59, 999);
@@ -30,10 +34,14 @@ async function checkSubscription(req, res, next) {
             subData = {
                 status: institute.status,
                 isExpired,
+                isLifetime: institute.is_lifetime_member || false,
                 time: Date.now()
             };
             subscriptionCache.set(instituteId, subData);
         }
+
+        // Lifetime members always have full access — skip all blocks
+        if (subData.isLifetime) return next();
 
         // Only enforce blocks strictly for POST/PUT/DELETE
         if (req.method !== 'GET') {

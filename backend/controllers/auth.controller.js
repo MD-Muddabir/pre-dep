@@ -251,6 +251,7 @@ exports.login = async (req, res) => {
                 institute_phone: user.Institute?.phone,
                 institute_logo: instituteLogo,
                 subscription_end: user.Institute?.subscription_end,
+                is_lifetime_member: user.Institute?.is_lifetime_member || false,
                 plan_name: user.Institute?.Plan?.name,
                 features,
                 permissions: user.permissions || [],
