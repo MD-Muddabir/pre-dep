@@ -1,6 +1,6 @@
 /**
  * Plan Model
- * Defines subscription plans with limits and features
+ * Defines subscription plans with limits and features.
  */
 
 const { DataTypes } = require("sequelize");
@@ -34,7 +34,6 @@ const Plan = sequelize.define("Plan", {
         type: DataTypes.INTEGER,
         defaultValue: 0
     },
-
     max_students: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -56,7 +55,7 @@ const Plan = sequelize.define("Plan", {
         defaultValue: 1
     },
 
-    // Core Features (Always Available)
+    // Core Features
     feature_students: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
@@ -77,8 +76,8 @@ const Plan = sequelize.define("Plan", {
     // Advanced Features
     feature_attendance: {
         type: DataTypes.STRING(10),
-        validate: { isIn: [['none', 'basic', 'advanced']] },
-        defaultValue: 'basic'
+        validate: { isIn: [["none", "basic", "advanced"]] },
+        defaultValue: "basic"
     },
     feature_auto_attendance: {
         type: DataTypes.BOOLEAN,
@@ -98,8 +97,8 @@ const Plan = sequelize.define("Plan", {
     },
     feature_reports: {
         type: DataTypes.STRING(10),
-        validate: { isIn: [['none', 'basic', 'advanced']] },
-        defaultValue: 'none'
+        validate: { isIn: [["none", "basic", "advanced"]] },
+        defaultValue: "none"
     },
     feature_announcements: {
         type: DataTypes.BOOLEAN,
@@ -136,6 +135,154 @@ const Plan = sequelize.define("Plan", {
     feature_chat: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
+    },
+
+    // Platform and billing
+    platform_type: {
+        type: DataTypes.STRING(20),
+        validate: { isIn: [["web_only", "web_android", "all"]] },
+        defaultValue: "web_only"
+    },
+    paired_plan_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    yearly_price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true
+    },
+    yearly_discount_percent: {
+        type: DataTypes.INTEGER,
+        defaultValue: 20
+    },
+    contact_sales: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+
+    // Extended usage limits
+    max_branches: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1
+    },
+    max_storage_mb: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1024
+    },
+    max_ai_messages: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 50
+    },
+    max_biometric_devices: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+    },
+
+    // Mobile features
+    feature_push_notifications: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    feature_offline_attendance: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    feature_parent_app: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    feature_student_app: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    feature_mobile_biometric: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+
+    // Display
+    display_order: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+
+    // ─── Platform & Billing ────────────────────────────────────────────────────
+    platform_type: {
+        type: DataTypes.STRING(20),
+        validate: { isIn: [['web_only', 'web_android', 'all']] },
+        defaultValue: 'web_only'
+    },
+    // ID of the paired plan (e.g. Growth web_only links to Growth+ web_android)
+    paired_plan_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    yearly_price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true
+    },
+    yearly_discount_percent: {
+        type: DataTypes.INTEGER,
+        defaultValue: 20
+    },
+    // If true, CTA shows "Contact Sales" — no public price shown
+    contact_sales: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+
+    // ─── Usage Limits ──────────────────────────────────────────────────────────
+    max_branches: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1
+    },
+    max_storage_mb: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1024  // 1 GB default
+    },
+    max_ai_messages: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 50
+    },
+    max_biometric_devices: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+    },
+
+    // ─── Mobile-Specific Features ──────────────────────────────────────────────
+    feature_push_notifications: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    feature_offline_attendance: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    feature_parent_app: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    feature_student_app: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    feature_mobile_biometric: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+
+    // ─── Display ───────────────────────────────────────────────────────────────
+    display_order: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
     },
 
     // Premium Features
@@ -175,21 +322,21 @@ const Plan = sequelize.define("Plan", {
     // Plan Status
     status: {
         type: DataTypes.STRING(20),
-        validate: { isIn: [['active', 'inactive', 'archived']] },
-        defaultValue: 'active'
+        validate: { isIn: [["active", "inactive", "archived"]] },
+        defaultValue: "active"
     },
     is_popular: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
 
-    // Razorpay Integration
+    // Razorpay Orders API integration stores one-time payment references elsewhere.
     razorpay_plan_id: {
         type: DataTypes.STRING,
         allowNull: true
     },
 
-    // ─── Lifetime Plan Fields ──────────────────────────────────────────────
+    // Lifetime Plan Fields
     is_lifetime: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
@@ -206,7 +353,6 @@ const Plan = sequelize.define("Plan", {
         type: DataTypes.INTEGER,
         defaultValue: 0
     },
-    // -1 = unlimited for lifetime members
     max_students_lifetime: {
         type: DataTypes.INTEGER,
         defaultValue: -1
@@ -233,7 +379,7 @@ const Plan = sequelize.define("Plan", {
     }
 }, {
     timestamps: true,
-    tableName: 'plans'
+    tableName: "plans"
 });
 
 module.exports = Plan;

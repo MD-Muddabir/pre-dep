@@ -31,7 +31,7 @@ const getBaseURL = () => {
         }
 
         if (import.meta.env.DEV) {
-            return "http://localhost:5000/api";
+            return "http://127.0.0.1:5000/api";
         }
 
         return "https://institutes-saas.onrender.com/api";

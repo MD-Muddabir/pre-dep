@@ -1,153 +1,334 @@
 /**
- * Seed Plans Data
- * Creates the 3 plans: Starter, Growth, Pro
+ * Seed finalized SaaS plans.
+ * Enterprise tiers intentionally use contact_sales so public UI can hide prices.
  */
 
 const { Plan } = require("../models");
 
 const seedPlans = async () => {
     try {
-        // Check if plans already exist
         const existingPlans = await Plan.count();
         if (existingPlans > 0) {
-            console.log("✅ Plans already seeded");
+            console.log("Plans already seeded");
             return;
         }
 
+        const baseFeatureSet = {
+            feature_students: true,
+            feature_faculty: true,
+            feature_classes: true,
+            feature_subjects: true,
+            feature_attendance: "basic",
+            feature_auto_attendance: false,
+            feature_fees: false,
+            feature_finance: false,
+            feature_salary: false,
+            feature_reports: "none",
+            feature_announcements: false,
+            feature_exams: false,
+            feature_export: false,
+            feature_email: false,
+            feature_sms: false,
+            feature_whatsapp: false,
+            feature_timetable: false,
+            feature_notes: false,
+            feature_chat: false,
+            feature_custom_branding: false,
+            feature_multi_branch: false,
+            feature_api_access: false,
+            feature_parent_portal: false,
+            feature_mobile_app: false,
+            feature_public_page: false,
+            feature_assignment: false,
+            feature_transport: false,
+            feature_push_notifications: false,
+            feature_offline_attendance: false,
+            feature_parent_app: false,
+            feature_student_app: false,
+            feature_mobile_biometric: false,
+            status: "active"
+        };
+
         const plans = [
             {
-                // 🥉 STARTER PLAN
+                ...baseFeatureSet,
                 name: "Starter",
-                description: "Best for small coaching centers (1-2 batches)",
-                price: 999.00,
-
-                // Limits
-                max_students: 100,
-                max_faculty: 5,
-                max_classes: 5,
+                description: "14-day free trial for small institutes getting started.",
+                price: 0,
+                yearly_price: null,
+                platform_type: "web_only",
+                is_free_trial: true,
+                trial_days: 14,
+                max_students: 50,
+                max_faculty: 3,
+                max_classes: 3,
                 max_admin_users: 1,
-
-                // Core Features (Always Available)
-                feature_students: true,
-                feature_faculty: true,
-                feature_classes: true,
-                feature_subjects: true,
-
-                // Advanced Features
-                feature_attendance: 'basic',
-                feature_auto_attendance: false,
-                feature_fees: false,
-                feature_reports: 'none',
-                feature_announcements: false,
-                feature_exams: false,
-                feature_timetable: false,
-                feature_export: false,
-                feature_email: false,
-                feature_sms: false,
-                feature_whatsapp: false,
-
-                // Premium Features
-                feature_custom_branding: false,
-                feature_multi_branch: false,
-                feature_api_access: false,
-                feature_parent_portal: false,
-                feature_mobile_app: false,
-
-                status: 'active',
-                is_popular: false
+                max_storage_mb: 1024,
+                max_ai_messages: 50,
+                display_order: 10
             },
             {
-                // 🥈 GROWTH PLAN (Most Popular)
+                ...baseFeatureSet,
                 name: "Growth",
-                description: "Best for growing institutes with fee management and reports",
-                price: 1999.00,
-
-                // Limits
-                max_students: 500,
-                max_faculty: 20,
-                max_classes: 20,
-                max_admin_users: 3,
-
-                // Core Features
-                feature_students: true,
-                feature_faculty: true,
-                feature_classes: true,
-                feature_subjects: true,
-
-                // Advanced Features
-                feature_attendance: 'advanced',
-                feature_auto_attendance: true,
+                description: "Web-only plan for growing institutes.",
+                price: 799,
+                yearly_price: 7670,
+                platform_type: "web_only",
+                max_students: 200,
+                max_faculty: 10,
+                max_classes: 10,
+                max_admin_users: 2,
+                max_storage_mb: 5120,
+                max_ai_messages: 250,
+                feature_attendance: "advanced",
                 feature_fees: true,
-                feature_reports: 'basic',
+                feature_reports: "basic",
                 feature_announcements: true,
                 feature_exams: true,
                 feature_timetable: true,
                 feature_export: true,
-                feature_email: true,
-                feature_sms: false,
-                feature_whatsapp: false,
-
-                // Premium Features
-                feature_custom_branding: false,
-                feature_multi_branch: false,
-                feature_api_access: false,
-                feature_parent_portal: false,
-                feature_mobile_app: false,
-
-                status: 'active',
-                is_popular: true // Most Popular
+                is_popular: true,
+                display_order: 20
             },
             {
-                // 🥇 PRO INSTITUTE PLAN
-                name: "Pro Institute",
-                description: "Best for large institutes with multi-branch support",
-                price: 3999.00,
-
-                // Limits
-                max_students: 1500,
-                max_faculty: 50,
-                max_classes: 50,
-                max_admin_users: 10,
-
-                // Core Features
-                feature_students: true,
-                feature_faculty: true,
-                feature_classes: true,
-                feature_subjects: true,
-
-                // Advanced Features
-                feature_attendance: 'advanced',
+                ...baseFeatureSet,
+                name: "Professional",
+                description: "Web-only plan for larger institutes with advanced workflows.",
+                price: 1999,
+                yearly_price: 19190,
+                platform_type: "web_only",
+                max_students: 500,
+                max_faculty: 25,
+                max_classes: 25,
+                max_admin_users: 5,
+                max_storage_mb: 20480,
+                max_ai_messages: 1000,
+                max_biometric_devices: 2,
+                feature_attendance: "advanced",
                 feature_auto_attendance: true,
                 feature_fees: true,
-                feature_reports: 'advanced',
+                feature_finance: true,
+                feature_salary: true,
+                feature_reports: "advanced",
                 feature_announcements: true,
                 feature_exams: true,
-                feature_timetable: true,
                 feature_export: true,
                 feature_email: true,
                 feature_sms: true,
                 feature_whatsapp: true,
-
-                // Premium Features
+                feature_timetable: true,
+                feature_notes: true,
+                feature_chat: true,
+                feature_public_page: true,
+                feature_assignment: true,
+                feature_transport: true,
+                display_order: 30
+            },
+            {
+                ...baseFeatureSet,
+                name: "Enterprise",
+                description: "Custom web-only plan for institutes with advanced scale needs.",
+                price: 0,
+                yearly_price: null,
+                platform_type: "web_only",
+                contact_sales: true,
+                max_students: -1,
+                max_faculty: -1,
+                max_classes: -1,
+                max_admin_users: 10,
+                max_branches: -1,
+                max_storage_mb: -1,
+                max_ai_messages: -1,
+                max_biometric_devices: -1,
+                feature_attendance: "advanced",
+                feature_auto_attendance: true,
+                feature_fees: true,
+                feature_finance: true,
+                feature_salary: true,
+                feature_reports: "advanced",
+                feature_announcements: true,
+                feature_exams: true,
+                feature_export: true,
+                feature_email: true,
+                feature_sms: true,
+                feature_whatsapp: true,
+                feature_timetable: true,
+                feature_notes: true,
+                feature_chat: true,
+                feature_custom_branding: true,
+                feature_multi_branch: true,
+                feature_api_access: true,
+                feature_parent_portal: true,
+                feature_public_page: true,
+                feature_assignment: true,
+                feature_transport: true,
+                display_order: 40
+            },
+            {
+                ...baseFeatureSet,
+                name: "Growth+",
+                description: "Growth plan bundled with Android access.",
+                price: 1199,
+                yearly_price: 11510,
+                platform_type: "web_android",
+                max_students: 200,
+                max_faculty: 10,
+                max_classes: 10,
+                max_admin_users: 2,
+                max_storage_mb: 5120,
+                max_ai_messages: 250,
+                feature_attendance: "advanced",
+                feature_fees: true,
+                feature_reports: "basic",
+                feature_announcements: true,
+                feature_exams: true,
+                feature_timetable: true,
+                feature_export: true,
+                feature_mobile_app: true,
+                feature_push_notifications: true,
+                is_popular: true,
+                display_order: 50
+            },
+            {
+                ...baseFeatureSet,
+                name: "Professional+",
+                description: "Professional plan bundled with Android, parent, and student app access.",
+                price: 2499,
+                yearly_price: 23990,
+                platform_type: "web_android",
+                max_students: 500,
+                max_faculty: 25,
+                max_classes: 25,
+                max_admin_users: 5,
+                max_storage_mb: 20480,
+                max_ai_messages: 1000,
+                max_biometric_devices: 2,
+                feature_attendance: "advanced",
+                feature_auto_attendance: true,
+                feature_fees: true,
+                feature_finance: true,
+                feature_salary: true,
+                feature_reports: "advanced",
+                feature_announcements: true,
+                feature_exams: true,
+                feature_export: true,
+                feature_email: true,
+                feature_sms: true,
+                feature_whatsapp: true,
+                feature_timetable: true,
+                feature_notes: true,
+                feature_chat: true,
+                feature_parent_portal: true,
+                feature_mobile_app: true,
+                feature_public_page: true,
+                feature_assignment: true,
+                feature_transport: true,
+                feature_push_notifications: true,
+                feature_offline_attendance: true,
+                feature_parent_app: true,
+                feature_student_app: true,
+                display_order: 60
+            },
+            {
+                ...baseFeatureSet,
+                name: "Enterprise+",
+                description: "Custom web and Android bundle for institute networks.",
+                price: 0,
+                yearly_price: null,
+                platform_type: "web_android",
+                contact_sales: true,
+                max_students: -1,
+                max_faculty: -1,
+                max_classes: -1,
+                max_admin_users: 10,
+                max_branches: -1,
+                max_storage_mb: -1,
+                max_ai_messages: -1,
+                max_biometric_devices: -1,
+                feature_attendance: "advanced",
+                feature_auto_attendance: true,
+                feature_fees: true,
+                feature_finance: true,
+                feature_salary: true,
+                feature_reports: "advanced",
+                feature_announcements: true,
+                feature_exams: true,
+                feature_export: true,
+                feature_email: true,
+                feature_sms: true,
+                feature_whatsapp: true,
+                feature_timetable: true,
+                feature_notes: true,
+                feature_chat: true,
                 feature_custom_branding: true,
                 feature_multi_branch: true,
                 feature_api_access: true,
                 feature_parent_portal: true,
                 feature_mobile_app: true,
-
-                status: 'active',
-                is_popular: false
+                feature_public_page: true,
+                feature_assignment: true,
+                feature_transport: true,
+                feature_push_notifications: true,
+                feature_offline_attendance: true,
+                feature_parent_app: true,
+                feature_student_app: true,
+                feature_mobile_biometric: true,
+                display_order: 70
+            },
+            {
+                ...baseFeatureSet,
+                name: "Lifetime Web Only",
+                description: "One-time lifetime web access for founding and standard members.",
+                price: 24999,
+                lifetime_price: 24999,
+                platform_type: "web_only",
+                is_lifetime: true,
+                max_students_lifetime: -1,
+                max_faculty_lifetime: -1,
+                max_managers_lifetime: -1,
+                display_order: 80
+            },
+            {
+                ...baseFeatureSet,
+                name: "Lifetime Web + Android",
+                description: "One-time lifetime web and Android bundle.",
+                price: 39999,
+                lifetime_price: 39999,
+                platform_type: "web_android",
+                is_lifetime: true,
+                max_students_lifetime: -1,
+                max_faculty_lifetime: -1,
+                max_managers_lifetime: -1,
+                feature_mobile_app: true,
+                feature_push_notifications: true,
+                feature_parent_app: true,
+                feature_student_app: true,
+                display_order: 90
             }
         ];
 
-        await Plan.bulkCreate(plans);
-        console.log("✅ Plans seeded successfully!");
-        console.log("   - Starter Plan (₹999/month)");
-        console.log("   - Growth Plan (₹1999/month) [Popular]");
-        console.log("   - Pro Institute Plan (₹3999/month)");
+        const createdPlans = await Plan.bulkCreate(plans, { returning: true });
+        const byName = Object.fromEntries(createdPlans.map((plan) => [plan.name, plan]));
 
+        await Promise.all([
+            byName.Growth?.update({ paired_plan_id: byName["Growth+"]?.id }),
+            byName["Growth+"]?.update({ paired_plan_id: byName.Growth?.id }),
+            byName.Professional?.update({ paired_plan_id: byName["Professional+"]?.id }),
+            byName["Professional+"]?.update({ paired_plan_id: byName.Professional?.id }),
+            byName.Enterprise?.update({ paired_plan_id: byName["Enterprise+"]?.id }),
+            byName["Enterprise+"]?.update({ paired_plan_id: byName.Enterprise?.id })
+        ]);
+
+        console.log("Plans seeded successfully");
+        console.log(" - Starter: free 14-day trial");
+        console.log(" - Growth: Rs.799/mo, Rs.7,670/yr");
+        console.log(" - Professional: Rs.1,999/mo, Rs.19,190/yr");
+        console.log(" - Enterprise: Contact Sales");
+        console.log(" - Growth+: Rs.1,199/mo, Rs.11,510/yr");
+        console.log(" - Professional+: Rs.2,499/mo, Rs.23,990/yr");
+        console.log(" - Enterprise+: Contact Sales");
     } catch (error) {
-        console.error("❌ Error seeding plans:", error);
+        console.error("Error seeding plans:", error);
         throw error;
     }
 };

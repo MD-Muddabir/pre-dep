@@ -120,6 +120,52 @@ const Institute = sequelize.define("Institute", {
         type: DataTypes.JSON,
         defaultValue: {}
     },
+    current_platform_type: {
+        type: DataTypes.STRING(20),
+        validate: { isIn: [["web_only", "web_android", "all"]] },
+        defaultValue: "web_only"
+    },
+    current_billing_cycle: {
+        type: DataTypes.STRING(20),
+        validate: { isIn: [["monthly", "yearly", "lifetime"]] },
+        defaultValue: "monthly"
+    },
+    current_limit_branches: {
+        type: DataTypes.INTEGER,
+        defaultValue: 1
+    },
+    current_limit_storage_mb: {
+        type: DataTypes.INTEGER,
+        defaultValue: 1024
+    },
+    current_limit_ai_messages: {
+        type: DataTypes.INTEGER,
+        defaultValue: 50
+    },
+    current_feature_push_notifications: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    current_feature_offline_attendance: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    current_feature_parent_app: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    current_feature_student_app: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    trial_ends_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    grace_period_ends_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
 
     // ─── Lifetime Membership Fields ──────────────────────────────────────────
     is_lifetime_member: {

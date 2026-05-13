@@ -2,6 +2,52 @@ const { Plan, Subscription, Institute, RazorpayPayment, RazorpayOrder, Invoice }
 const paymentService = require("../services/payment.service");
 const invoiceService = require("../services/invoice.service");
 
+const getPlanAmountForCycle = (plan, billingCycle = "monthly") => {
+    if (billingCycle === "yearly") {
+        if (plan.yearly_price !== null && plan.yearly_price !== undefined) {
+            return Number(plan.yearly_price);
+        }
+
+        const discountPercent = Number(plan.yearly_discount_percent ?? 20);
+        return Number(plan.price) * 12 * ((100 - discountPercent) / 100);
+    }
+
+    return Number(plan.price);
+};
+
+const getPlanSnapshot = (plan, billingCycle = "monthly") => ({
+    current_limit_students: plan.max_students,
+    current_limit_faculty: plan.max_faculty,
+    current_limit_classes: plan.max_classes,
+    current_limit_admins: plan.max_admin_users,
+    current_platform_type: plan.platform_type,
+    current_billing_cycle: billingCycle,
+    current_limit_branches: plan.max_branches,
+    current_limit_storage_mb: plan.max_storage_mb,
+    current_limit_ai_messages: plan.max_ai_messages,
+    current_feature_attendance: plan.feature_attendance,
+    current_feature_auto_attendance: plan.feature_auto_attendance,
+    current_feature_fees: plan.feature_fees,
+    current_feature_finance: plan.feature_finance,
+    current_feature_salary: plan.feature_salary,
+    current_feature_reports: plan.feature_reports,
+    current_feature_announcements: plan.feature_announcements,
+    current_feature_export: plan.feature_export,
+    current_feature_timetable: plan.feature_timetable,
+    current_feature_whatsapp: plan.feature_whatsapp,
+    current_feature_custom_branding: plan.feature_custom_branding,
+    current_feature_multi_branch: plan.feature_multi_branch,
+    current_feature_api_access: plan.feature_api_access,
+    current_feature_assignment: plan.feature_assignment,
+    current_feature_transport: plan.feature_transport,
+    current_feature_public_page: plan.feature_public_page,
+    current_feature_mobile_app: plan.feature_mobile_app,
+    current_feature_push_notifications: plan.feature_push_notifications,
+    current_feature_offline_attendance: plan.feature_offline_attendance,
+    current_feature_parent_app: plan.feature_parent_app,
+    current_feature_student_app: plan.feature_student_app
+});
+
 /**
  * Initiate Payment (Create Order)
  */
@@ -12,6 +58,12 @@ exports.initiatePayment = async (req, res) => {
 
         const plan = await Plan.findByPk(planId);
         if (!plan) return res.status(404).json({ message: "Plan not found" });
+        if (plan.contact_sales) {
+            return res.status(400).json({
+                success: false,
+                message: "This plan requires contacting sales."
+            });
+        }
 
         const institute = await Institute.findByPk(instituteId);
 
@@ -27,6 +79,9 @@ exports.initiatePayment = async (req, res) => {
                 plan_id: planId,
                 start_date: startDate,
                 end_date: endDate,
+                billing_cycle: "monthly",
+                platform_type: plan.platform_type,
+                status: "trialing",
                 payment_status: "paid",
                 transaction_reference: "free_trial",
                 amount_paid: 0
@@ -39,37 +94,15 @@ exports.initiatePayment = async (req, res) => {
                 subscription_start: startDate,
                 subscription_end: endDate,
                 has_used_trial: true,
-                current_limit_students: plan.max_students,
-                current_limit_faculty: plan.max_faculty,
-                current_limit_classes: plan.max_classes,
-                current_limit_admins: plan.max_admin_users,
-                current_feature_attendance: plan.feature_attendance,
-                current_feature_auto_attendance: plan.feature_auto_attendance,
-                current_feature_fees: plan.feature_fees,
-                current_feature_finance: plan.feature_finance,
-                current_feature_salary: plan.feature_salary,
-                current_feature_reports: plan.feature_reports,
-                current_feature_announcements: plan.feature_announcements,
-                current_feature_export: plan.feature_export,
-                current_feature_timetable: plan.feature_timetable,
-                current_feature_whatsapp: plan.feature_whatsapp,
-                current_feature_custom_branding: plan.feature_custom_branding,
-                current_feature_multi_branch: plan.feature_multi_branch,
-                current_feature_api_access: plan.feature_api_access,
-                current_feature_assignment: plan.feature_assignment,
-                current_feature_transport: plan.feature_transport,
-                current_feature_public_page: plan.feature_public_page,
-                current_feature_mobile_app: plan.feature_mobile_app,
+                trial_ends_at: endDate,
+                ...getPlanSnapshot(plan, "monthly")
             });
 
             return res.json({ success: true, trial_activated: true });
         }
 
         // Calculate amount for paid plans
-        let amount = Number(plan.price);
-        if (billingCycle === 'yearly') {
-            amount = amount * 12 * 0.8; // 20% discount
-        }
+        const amount = getPlanAmountForCycle(plan, billingCycle);
         
         // Let's add GST 18% as per docs
         const tax_amount = amount * 0.18;
@@ -166,10 +199,9 @@ exports.verifyPayment = async (req, res) => {
         // Update/Create Subscription
         const plan = await Plan.findByPk(planId);
 
-        let amount = Number(plan.price);
+        let amount = getPlanAmountForCycle(plan, billingCycle);
         let durationMonths = 1;
         if (billingCycle === 'yearly') {
-            amount = amount * 12 * 0.8;
             durationMonths = 12;
         }
 
@@ -188,6 +220,9 @@ exports.verifyPayment = async (req, res) => {
             plan_id: planId,
             start_date: startDate,
             end_date: endDate,
+            billing_cycle: billingCycle || "monthly",
+            platform_type: plan.platform_type,
+            status: "active",
             payment_status: "paid",
             transaction_reference: razorpay_payment_id,
             amount_paid: final_paid,
@@ -238,28 +273,9 @@ exports.verifyPayment = async (req, res) => {
                 plan_id: planId,
                 subscription_start: startDate,
                 subscription_end: endDate,
-                current_limit_students: plan.max_students,
-                current_limit_faculty: plan.max_faculty,
-                current_limit_classes: plan.max_classes,
-                current_limit_admins: plan.max_admin_users,
-
-                current_feature_attendance: plan.feature_attendance,
-                current_feature_auto_attendance: plan.feature_auto_attendance,
-                current_feature_fees: plan.feature_fees,
-                current_feature_finance: plan.feature_finance,
-                current_feature_salary: plan.feature_salary,
-                current_feature_reports: plan.feature_reports,
-                current_feature_announcements: plan.feature_announcements,
-                current_feature_export: plan.feature_export,
-                current_feature_timetable: plan.feature_timetable,
-                current_feature_whatsapp: plan.feature_whatsapp,
-                current_feature_custom_branding: plan.feature_custom_branding,
-                current_feature_multi_branch: plan.feature_multi_branch,
-                current_feature_api_access: plan.feature_api_access,
-                current_feature_assignment: plan.feature_assignment,
-                current_feature_transport: plan.feature_transport,
-                current_feature_public_page: plan.feature_public_page,
-                current_feature_mobile_app: plan.feature_mobile_app,
+                trial_ends_at: null,
+                grace_period_ends_at: null,
+                ...getPlanSnapshot(plan, billingCycle || "monthly")
             },
             { where: { id: instituteId } }
         );

@@ -60,11 +60,17 @@ const InstituteDiscount = require("./instituteDiscount");
 const Lead = require("./lead");
 const LandingPageView = require("./landingPageView");
 const RefreshToken = require("./refreshToken"); // ✅ Phase 7: Refresh Token model
+const AddOn = require("./addOn");
+const InstituteAddOn = require("./instituteAddOn");
+const SubscriptionEvent = require("./subscriptionEvent");
+const Coupon = require("./coupon");
+const UsageTracker = require("./usageTracker");
 
 // Associations
 
 Plan.hasMany(Subscription, { foreignKey: "plan_id" });
 Subscription.belongsTo(Plan, { foreignKey: "plan_id" });
+Plan.belongsTo(Plan, { as: "PairedPlan", foreignKey: "paired_plan_id" });
 
 Plan.hasMany(Institute, { foreignKey: "plan_id" });
 Institute.belongsTo(Plan, { foreignKey: "plan_id" });
@@ -211,6 +217,23 @@ User.hasMany(FacultyAttendance, { foreignKey: "marked_by" });
 // Subscription Associations
 Institute.hasMany(Subscription, { foreignKey: "institute_id" });
 Subscription.belongsTo(Institute, { foreignKey: "institute_id" });
+Coupon.hasMany(Subscription, { foreignKey: "coupon_id" });
+Subscription.belongsTo(Coupon, { foreignKey: "coupon_id" });
+
+AddOn.hasMany(InstituteAddOn, { foreignKey: "add_on_id" });
+InstituteAddOn.belongsTo(AddOn, { foreignKey: "add_on_id" });
+
+Institute.hasMany(InstituteAddOn, { foreignKey: "institute_id" });
+InstituteAddOn.belongsTo(Institute, { foreignKey: "institute_id" });
+
+Institute.hasMany(SubscriptionEvent, { foreignKey: "institute_id" });
+SubscriptionEvent.belongsTo(Institute, { foreignKey: "institute_id" });
+
+Subscription.hasMany(SubscriptionEvent, { foreignKey: "subscription_id" });
+SubscriptionEvent.belongsTo(Subscription, { foreignKey: "subscription_id" });
+
+Institute.hasMany(UsageTracker, { foreignKey: "institute_id" });
+UsageTracker.belongsTo(Institute, { foreignKey: "institute_id" });
 
 // ClassSession Associations
 ClassSession.belongsTo(Institute, { foreignKey: "institute_id" });
@@ -500,4 +523,9 @@ module.exports = {
     SlowRequestLog,
     BulkImportLog,
     RefreshToken,
+    AddOn,
+    InstituteAddOn,
+    SubscriptionEvent,
+    Coupon,
+    UsageTracker,
 };

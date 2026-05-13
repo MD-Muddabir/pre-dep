@@ -554,12 +554,21 @@ const syncDatabase = async () => {
 
     // Auto-sync other schema changes using alter for the explicit models to make sure everything matches
     try {
-      const { InstitutePublicProfile, InstituteGalleryPhoto, InstituteReview, PublicEnquiry, Subscription, Plan, User, LandingPageView } = require('./models');
+      const { InstitutePublicProfile, InstituteGalleryPhoto, InstituteReview, PublicEnquiry, Subscription, Plan, User, LandingPageView, Coupon, AddOn, InstituteAddOn, SubscriptionEvent, UsageTracker } = require('./models');
       await InstitutePublicProfile.sync({ alter: true });
       await InstituteGalleryPhoto.sync({ alter: true });
       await InstituteReview.sync({ alter: true });
       await PublicEnquiry.sync({ alter: true });
+      
+      // Sync new models before Subscription to prevent foreign key constraint errors
+      await Coupon.sync({ alter: true });
+      await AddOn.sync({ alter: true });
+      await InstituteAddOn.sync({ alter: true });
+      await UsageTracker.sync({ alter: true });
+      
       await Subscription.sync({ alter: true });
+      await SubscriptionEvent.sync({ alter: true });
+      
       await Plan.sync({ alter: true });
       await User.sync({ alter: true });  // âœ… picks up manager_type + manager_type_label
       await LandingPageView.sync({ alter: true });
