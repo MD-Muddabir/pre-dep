@@ -682,8 +682,11 @@ function RegisterPage() {
                                         <option value="">-- Select a plan --</option>
                                         {plans.map(plan => (
                                             <option key={plan.id} value={plan.id}>
-                                                {plan.name} — {plan.is_free_trial ? "₹0/month (Free Trial)" : `₹${plan.price}/month`}
-                                                {plan.max_students ? ` · Up to ${plan.max_students} students` : " · Unlimited"}
+                                                {plan.name} — {plan.is_free_trial ? "₹0/month (Free Trial)" : plan.is_lifetime ? `₹${plan.lifetime_price || plan.price} (One-Time)` : `₹${plan.price}/month`}
+                                                {plan.is_lifetime 
+                                                    ? (plan.max_students_lifetime && plan.max_students_lifetime !== -1 ? ` · Up to ${plan.max_students_lifetime} students` : " · Unlimited")
+                                                    : (plan.max_students && plan.max_students !== -1 ? ` · Up to ${plan.max_students} students` : " · Unlimited")
+                                                }
                                             </option>
                                         ))}
                                     </select>

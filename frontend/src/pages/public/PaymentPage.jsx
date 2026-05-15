@@ -172,18 +172,21 @@ function PaymentPage() {
     };
 
     const isFree = plan?.is_free_trial && !hasUsedTrial;
+    const isLifetime = plan?.is_lifetime;
 
     const price = isFree ? 0
+        : isLifetime ? (plan?.lifetime_price || plan?.price || 0)
         : billingCycle === "yearly"
             ? Math.round((plan?.price || 0) * 12 * 0.8)
             : (plan?.price || 0);
 
     const monthlyEquiv = isFree ? 0
+        : isLifetime ? 0
         : billingCycle === "yearly"
             ? Math.round((plan?.price || 0) * 0.8)
             : (plan?.price || 0);
 
-    const savings = !isFree && billingCycle === "yearly"
+    const savings = !isFree && !isLifetime && billingCycle === "yearly"
         ? Math.round((plan?.price || 0) * 12 * 0.2)
         : 0;
 
@@ -233,7 +236,7 @@ function PaymentPage() {
                     </p>
 
                     {/* Billing Cycle Selector */}
-                    {!isFree && (
+                    {!isFree && !isLifetime && (
                         <div className="checkout-billing-toggle">
                             <button
                                 className={`checkout-billing-btn ${billingCycle === "monthly" ? "active" : ""}`}
@@ -258,10 +261,13 @@ function PaymentPage() {
                             <span className="checkout-amount">
                                 {isFree ? "0" : price.toLocaleString("en-IN")}
                             </span>
-                            {!isFree && (
+                            {!isFree && !isLifetime && (
                                 <span className="checkout-period">
                                     /{billingCycle === "yearly" ? "year" : "mo"}
                                 </span>
+                            )}
+                            {isLifetime && (
+                                <span className="checkout-period"> / One-Time</span>
                             )}
                         </div>
                         {!isFree && billingCycle === "yearly" && (
@@ -279,9 +285,9 @@ function PaymentPage() {
                         <p className="checkout-includes-title">What's included:</p>
                         <ul className="checkout-features-list">
                             {[
-                                plan.max_students && `Up to ${plan.max_students} students`,
-                                plan.max_faculty && `Up to ${plan.max_faculty} faculty members`,
-                                plan.max_classes && `Up to ${plan.max_classes} classes`,
+                                isLifetime ? (plan.max_students_lifetime && plan.max_students_lifetime !== -1 ? `Up to ${plan.max_students_lifetime} students` : "Unlimited students") : (plan.max_students && plan.max_students !== -1 ? `Up to ${plan.max_students} students` : "Unlimited students"),
+                                isLifetime ? (plan.max_faculty_lifetime && plan.max_faculty_lifetime !== -1 ? `Up to ${plan.max_faculty_lifetime} faculty members` : "Unlimited faculty members") : (plan.max_faculty && plan.max_faculty !== -1 ? `Up to ${plan.max_faculty} faculty members` : "Unlimited faculty members"),
+                                plan.max_classes && plan.max_classes !== -1 ? `Up to ${plan.max_classes} classes` : "Unlimited classes",
                                 plan.feature_attendance && "Attendance management",
                                 plan.feature_fees && "Fees & payment tracking",
                                 plan.feature_finance && "Finance dashboard",
@@ -328,7 +334,7 @@ function PaymentPage() {
                                 <span className="checkout-row-label">Plan</span>
                                 <span className="checkout-row-value">{plan.name}</span>
                             </div>
-                            {!isFree && (
+                            {!isFree && !isLifetime && (
                                 <div className="checkout-summary-row">
                                     <span className="checkout-row-label">Billing cycle</span>
                                     <span className="checkout-row-value">
@@ -336,7 +342,13 @@ function PaymentPage() {
                                     </span>
                                 </div>
                             )}
-                            {!isFree && billingCycle === "yearly" && savings > 0 && (
+                            {isLifetime && (
+                                <div className="checkout-summary-row">
+                                    <span className="checkout-row-label">Billing cycle</span>
+                                    <span className="checkout-row-value">One-Time Payment</span>
+                                </div>
+                            )}
+                            {!isFree && !isLifetime && billingCycle === "yearly" && savings > 0 && (
                                 <div className="checkout-summary-row discount-row">
                                     <span className="checkout-row-label">Annual discount (20%)</span>
                                     <span className="checkout-row-value discount-value">-₹{savings.toLocaleString("en-IN")}</span>

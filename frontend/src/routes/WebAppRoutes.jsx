@@ -9,7 +9,6 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const Home = lazy(() => import("../pages/public/Home"));
 const Pricing = lazy(() => import("../pages/public/PricingPage"));
-const Contact = lazy(() => import("../pages/public/ContactPage"));
 const PaymentAndCheckout = lazy(() => import("../pages/public/PaymentPage"));
 const Terms = lazy(() => import("../pages/public/TermsPage"));
 const Privacy = lazy(() => import("../pages/public/PrivacyPage"));
@@ -123,14 +122,15 @@ export default function WebAppRoutes() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={isNative ? <Navigate to="/login" replace /> : <Home />} />
-        <Route path="/pricing" element={isNative ? <Navigate to="/login" replace /> : <Home />} />
+        <Route path="/pricing" element={isNative ? <Navigate to="/login" replace /> : <Pricing />} />
+        <Route path="/plans" element={isNative ? <Navigate to="/login" replace /> : <Pricing />} />
+        <Route path="/terms" element={isNative ? <Navigate to="/login" replace /> : <Terms />} />
+        <Route path="/privacy" element={isNative ? <Navigate to="/login" replace /> : <Privacy />} />
         <Route path="/renew-plan" element={isNative ? <Navigate to="/login" replace /> : <Home />} />
         <Route path="/checkout" element={isNative ? <Navigate to="/login" replace /> : <PaymentAndCheckout />} />
         <Route path="/features" element={isNative ? <Navigate to="/login" replace /> : <Home />} />
         <Route path="/about" element={isNative ? <Navigate to="/login" replace /> : <Home />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/contact" element={isNative ? <Navigate to="/login" replace /> : <Navigate to="/#contact" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />

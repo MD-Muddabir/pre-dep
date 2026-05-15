@@ -1,5 +1,7 @@
 /**
- * Pricing Page - Dynamic Plan Loading with Lifetime Access Card
+ * PricingPage — Professional SaaS Pricing Experience
+ * Features: Platform tabs, billing toggle, compact cards,
+ *           feature comparison modal, premium lifetime section
  */
 
 import { useState, useEffect, useContext } from "react";
@@ -7,7 +9,55 @@ import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
 import PublicNavbar from "../../components/layout/PublicNavbar";
-import "./PublicPages.css";
+import "./PricingPage.css";
+
+/* ───────── Feature comparison data ───────── */
+const COMPARISON_FEATURES = [
+    { section: "Core" },
+    { label: "Students", key: "max_students", format: v => v === -1 ? "Unlimited" : `Up to ${v}` },
+    { label: "Faculty", key: "max_faculty", format: v => v === -1 ? "Unlimited" : `${v}` },
+    { label: "Classes", key: "max_classes", format: v => v === -1 ? "Unlimited" : `${v}` },
+    { label: "Admins", key: "max_admin_users", format: v => v === -1 ? "Unlimited" : `${v}` },
+    { label: "Storage", key: "max_storage_mb", format: v => v === -1 ? "Unlimited" : `${(v / 1024).toFixed(0)} GB` },
+    { section: "Features" },
+    { label: "Attendance Tracking", key: "feature_attendance", format: v => v === "advanced" ? "Advanced" : v === "basic" ? "Basic" : "—" },
+    { label: "Fee Management", key: "feature_fees", bool: true },
+    { label: "Exams & Marks", key: "feature_exams", bool: true },
+    { label: "Timetable", key: "feature_timetable", bool: true },
+    { label: "Reports & Analytics", key: "feature_reports", format: v => v === "advanced" ? "Advanced" : v === "basic" ? "Basic" : "—" },
+    { label: "Announcements", key: "feature_announcements", bool: true },
+    { label: "Notes", key: "feature_notes", bool: true },
+    { label: "Chat", key: "feature_chat", bool: true },
+    { label: "Assignments", key: "feature_assignment", bool: true },
+    { section: "Communication" },
+    { label: "SMS Notifications", key: "feature_sms", bool: true },
+    { label: "Email Notifications", key: "feature_email", bool: true },
+    { label: "WhatsApp", key: "feature_whatsapp", bool: true },
+    { section: "Advanced" },
+    { label: "Finance & Salary", key: "feature_finance", bool: true },
+    { label: "Transport Fees", key: "feature_transport", bool: true },
+    { label: "Public Profile Page", key: "feature_public_page", bool: true },
+    { label: "Parent Portal", key: "feature_parent_portal", bool: true },
+    { label: "Custom Branding", key: "feature_custom_branding", bool: true },
+    { label: "Multi-Branch", key: "feature_multi_branch", bool: true },
+    { label: "API Access", key: "feature_api_access", bool: true },
+    { section: "Mobile" },
+    { label: "Mobile App Access", key: "feature_mobile_app", bool: true },
+    { label: "Push Notifications", key: "feature_push_notifications", bool: true },
+    { label: "Offline Attendance", key: "feature_offline_attendance", bool: true },
+    { label: "Parent App", key: "feature_parent_app", bool: true },
+    { label: "Student App", key: "feature_student_app", bool: true },
+];
+
+/* ───────── FAQ data ───────── */
+const FAQS = [
+    { q: "Can I change my plan later?", a: "Yes! You can upgrade or downgrade at any time. Upgrades take effect immediately with prorated billing, and downgrades apply at the end of your current billing cycle." },
+    { q: "Is there a free trial?", a: "Yes, every new institute gets a full 14-day free trial with access to all Starter features. No credit card required." },
+    { q: "What payment methods do you accept?", a: "We accept all major credit/debit cards, UPI, net banking, and popular digital wallets through Razorpay's secure payment gateway." },
+    { q: "What's the difference between Web Only and Web + Android?", a: "Web Only gives your institute access via the browser. Web + Android plans include a branded Android mobile app for parents, students, and faculty with push notifications and offline features." },
+    { q: "Is my data secure?", a: "Absolutely. We use bank-level encryption (TLS 1.3), automated daily backups, and role-based access controls. Your data is isolated per institute." },
+    { q: "What does Lifetime Access include?", a: "A one-time payment gives you permanent access to all features with no recurring charges. Includes all future feature updates and priority support." },
+];
 
 function PricingPage() {
     const navigate = useNavigate();
@@ -16,6 +66,10 @@ function PricingPage() {
     const [lifetimePlan, setLifetimePlan] = useState(null);
     const [loading, setLoading] = useState(true);
     const [billingCycle, setBillingCycle] = useState("monthly");
+    const [activeTab, setActiveTab] = useState("web_only");
+    const [showModal, setShowModal] = useState(false);
+    const [modalPlan, setModalPlan] = useState(null); // for single-plan detail view
+    const [openFaq, setOpenFaq] = useState(null);
 
     useEffect(() => {
         fetchPlans();
@@ -25,7 +79,9 @@ function PricingPage() {
     const fetchPlans = async () => {
         try {
             const response = await api.get("/plans");
-            const activePlans = response.data.data.filter(plan => plan.status === "active" && !plan.is_lifetime);
+            const activePlans = response.data.data
+                .filter(p => p.status === "active" && !p.is_lifetime)
+                .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
             setPlans(activePlans);
         } catch (error) {
             console.error("Error fetching plans:", error);
@@ -36,321 +92,345 @@ function PricingPage() {
 
     const fetchLifetimePlan = async () => {
         try {
-            const response = await api.get("/lifetime/info");
-            if (response.data.success) {
-                setLifetimePlan(response.data.plan);
-            }
-        } catch (error) {
-            // Lifetime plan may not be configured yet
-            console.log("No lifetime plan available");
-        }
+            const res = await api.get("/lifetime/info");
+            if (res.data.success) setLifetimePlan(res.data.plan);
+        } catch { /* not configured yet */ }
     };
 
-    const handleChoosePlan = (planId) => {
-        if (user && user.role === 'admin') {
-            navigate(`/checkout?plan_id=${planId}`);
+    const handleChoosePlan = (plan) => {
+        if (plan.contact_sales) {
+            navigate("/contact");
+            return;
+        }
+        if (user && user.role === "admin") {
+            navigate(`/checkout?plan_id=${plan.id}&cycle=${billingCycle}`);
         } else {
-            localStorage.setItem("selectedPlan", planId);
+            localStorage.setItem("selectedPlan", plan.id);
             navigate("/register");
         }
     };
 
     const handleChooseLifetime = () => {
-        if (user && user.role === 'admin') {
-            navigate('/billing?tab=lifetime');
+        if (user && user.role === "admin") {
+            navigate("/billing?tab=lifetime");
         } else {
             navigate("/register?intent=lifetime");
         }
     };
 
-    const getPlanFeatures = (plan) => {
-        const features = [];
-        if (plan.feature_students) features.push(`Up to ${plan.max_students} students`);
-        if (plan.feature_faculty) features.push("Faculty management");
-        if (plan.feature_attendance) features.push("Attendance tracking");
-        if (plan.feature_fees) features.push("Fee management");
-        if (plan.feature_exams) features.push("Examination management");
-        if (plan.feature_timetable) features.push("Master timetable generation");
-        if (plan.feature_reports) features.push("Reports & analytics");
-        if (plan.feature_sms) features.push("SMS notifications");
-        if (plan.feature_email) features.push("Email notifications");
-        if (plan.feature_parent_portal) features.push("Parent portal");
-        if (plan.feature_mobile_app) features.push("Mobile app access");
-        if (plan.feature_api_access) features.push("API access");
-        return features;
+    /* ── Filtered plans by platform tab ── */
+    const filteredPlans = plans.filter(p => p.platform_type === activeTab);
+
+    /* ── Get display price ── */
+    const getPrice = (plan) => {
+        if (plan.contact_sales) return null;
+        if (billingCycle === "yearly" && plan.yearly_price) return Number(plan.yearly_price);
+        return Number(plan.price);
     };
 
-    const isEnterprisePlan = (plan) => {
-        return plan.name.toLowerCase().includes("enterprise") || plan.max_students >= 1000;
+    const formatPrice = (num) => {
+        if (!num && num !== 0) return "";
+        return num.toLocaleString("en-IN");
     };
 
-    const LifetimeFeatures = [
-        "✅ Unlimited students & faculty",
-        "✅ All premium features unlocked forever",
-        "✅ Advanced attendance & biometric",
-        "✅ Full finance & salary management",
-        "✅ Custom branding & mobile app",
-        "✅ API access & multi-branch",
-        "✅ Priority support (24/7)",
-        "✅ Free future feature updates",
-        "✅ Custom subdomain",
-        "✅ No monthly/yearly fees — ever",
-    ];
+    /* ── Key limits for compact card ── */
+    const getKeyLimits = (plan) => {
+        const limits = [];
+        const ms = plan.max_students;
+        limits.push({ icon: "👥", text: ms === -1 ? "Unlimited Students" : `${ms} Students` });
+        const mf = plan.max_faculty;
+        limits.push({ icon: "👨‍🏫", text: mf === -1 ? "Unlimited Faculty" : `${mf} Faculty` });
+        if (plan.max_branches && plan.max_branches !== 1) {
+            limits.push({ icon: "🏢", text: plan.max_branches === -1 ? "Multi-Branch" : `${plan.max_branches} Branches` });
+        }
+        return limits;
+    };
 
     if (loading) {
         return (
-            <div className="pricing-page">
-                <div className="container">
-                    <div className="loading-state">Loading plans...</div>
-                </div>
+            <div className="sp-pricing">
+                <PublicNavbar />
+                <div style={{ textAlign: "center", padding: "6rem 2rem", color: "#94a3b8" }}>Loading plans...</div>
             </div>
         );
     }
 
     return (
-        <div className="pricing-page">
-            {/* Navigation */}
+        <div className="sp-pricing">
             <PublicNavbar />
 
-            {/* Pricing Header */}
-            <section className="pricing-header">
-                <div className="container">
-                    <h1 className="page-title">Simple, Transparent Pricing</h1>
-                    <p className="page-subtitle">Choose the perfect plan for your coaching center</p>
+            {/* ── Header ── */}
+            <header className="sp-header">
+                <div className="sp-badge">Transparent Pricing</div>
+                <h1 className="sp-title">Choose the Perfect Plan for Your Institute</h1>
+                <p className="sp-subtitle">
+                    No hidden fees. Cancel anytime. Start with our 14-day free trial — no credit card required.
+                </p>
+            </header>
 
-                    {/* Billing Toggle */}
-                    <div className="billing-toggle">
-                        <button
-                            className={billingCycle === "monthly" ? "active" : ""}
-                            onClick={() => setBillingCycle("monthly")}
-                        >
-                            Monthly
-                        </button>
-                        <button
-                            className={billingCycle === "yearly" ? "active" : ""}
-                            onClick={() => setBillingCycle("yearly")}
-                        >
-                            Yearly <span className="discount-badge">Save 20%</span>
-                        </button>
-                    </div>
+            {/* ── Trust Bar ── */}
+            <div className="sp-trust-bar">
+                <div className="sp-trust-item"><span className="icon">🔒</span> Secure Payments</div>
+                <div className="sp-trust-item"><span className="icon">⚡</span> Instant Setup</div>
+                <div className="sp-trust-item"><span className="icon">📞</span> Free Support</div>
+                <div className="sp-trust-item"><span className="icon">🔄</span> Cancel Anytime</div>
+            </div>
+
+            {/* ── Controls: Platform Tabs + Billing Toggle ── */}
+            <div className="sp-controls">
+                <div className="sp-platform-tabs">
+                    <button
+                        className={`sp-platform-tab ${activeTab === "web_only" ? "active" : ""}`}
+                        onClick={() => setActiveTab("web_only")}
+                    >
+                        💻 Web Only
+                    </button>
+                    <button
+                        className={`sp-platform-tab ${activeTab === "web_android" ? "active" : ""}`}
+                        onClick={() => setActiveTab("web_android")}
+                    >
+                        📱 Web + Android
+                    </button>
                 </div>
-            </section>
 
-            {/* ── Lifetime Access Premium Banner ── */}
-            {lifetimePlan && (
-                <section style={{ padding: '0 0 2rem' }}>
-                    <div className="container">
-                        <div style={{
-                            background: 'linear-gradient(135deg, #1a0533 0%, #3b0764 40%, #4c1d95 70%, #7c3aed 100%)',
-                            borderRadius: '20px',
-                            padding: '3rem',
-                            color: '#fff',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            border: '1px solid rgba(167,139,250,0.3)',
-                            boxShadow: '0 20px 60px rgba(124,58,237,0.4)'
-                        }}>
-                            {/* Decorative sparkles */}
-                            <div style={{ position: 'absolute', top: 20, right: 30, fontSize: 40, opacity: 0.15 }}>💎</div>
-                            <div style={{ position: 'absolute', bottom: 20, right: 80, fontSize: 60, opacity: 0.1 }}>⭐</div>
+                <div className="sp-billing-toggle">
+                    <button
+                        className={`sp-billing-btn ${billingCycle === "monthly" ? "active" : ""}`}
+                        onClick={() => setBillingCycle("monthly")}
+                    >
+                        Monthly
+                    </button>
+                    <button
+                        className={`sp-billing-btn ${billingCycle === "yearly" ? "active" : ""}`}
+                        onClick={() => setBillingCycle("yearly")}
+                    >
+                        Annual <span className="sp-save-tag">Save 20%</span>
+                    </button>
+                </div>
+            </div>
 
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                                {/* Left: Info */}
-                                <div style={{ flex: '1', minWidth: '280px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                                        <span style={{ fontSize: '2.5rem' }}>💎</span>
-                                        <div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <h2 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 800 }}>Lifetime Access</h2>
-                                                {lifetimePlan.is_founding_available && (
-                                                    <span style={{ background: '#f59e0b', color: '#000', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                                        🌟 Founding Member
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p style={{ margin: '4px 0 0', color: '#c4b5fd', fontSize: '14px' }}>
-                                                Pay once. Use forever. No subscriptions.
-                                            </p>
-                                        </div>
+            {/* ── Plan Cards ── */}
+            <div className="sp-plans-container">
+                <div className="sp-plans-grid">
+                    {filteredPlans.map((plan) => {
+                        const price = getPrice(plan);
+                        const isTrial = plan.is_free_trial;
+                        const isPopular = plan.is_popular;
+                        const isEnterprise = plan.contact_sales;
+
+                        return (
+                            <div
+                                key={plan.id}
+                                className={`sp-plan-card ${isPopular ? "popular" : ""} ${isTrial ? "trial" : ""}`}
+                            >
+                                {isPopular && <div className="sp-popular-tag">Most Popular</div>}
+                                {isTrial && !isPopular && <div className="sp-trial-tag">14-Day Free Trial</div>}
+
+                                <h3 className="sp-plan-name">{plan.name}</h3>
+
+                                {/* Price */}
+                                {isEnterprise ? (
+                                    <div className="sp-price-block contact-sales">
+                                        <div className="sp-price-label">Custom Pricing</div>
                                     </div>
-
-                                    {/* Urgency: slots */}
-                                    <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '10px', padding: '10px 16px', marginBottom: '20px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ fontSize: '16px' }}>⚡</span>
-                                        <span style={{ fontSize: '13px', color: '#fca5a5', fontWeight: 600 }}>
-                                            Only <strong style={{ color: '#fff' }}>{lifetimePlan.slots_remaining}</strong> slots remaining out of {lifetimePlan.lifetime_slots_total}!
-                                        </span>
+                                ) : (
+                                    <div className="sp-price-block">
+                                        <span className="sp-currency">₹</span>
+                                        <span className="sp-price-amount">{formatPrice(price)}</span>
+                                        <span className="sp-price-period">/{billingCycle === "yearly" ? "yr" : "mo"}</span>
                                     </div>
-
-                                    {/* Features grid */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '6px' }}>
-                                        {LifetimeFeatures.map((f, i) => (
-                                            <div key={i} style={{ fontSize: '14px', color: '#e9d5ff', padding: '4px 0' }}>{f}</div>
-                                        ))}
-                                    </div>
+                                )}
+                                <div className="sp-price-note">
+                                    {isTrial
+                                        ? "Free for 14 days, no card needed"
+                                        : isEnterprise
+                                            ? "Tailored to your institute needs"
+                                            : billingCycle === "yearly"
+                                                ? `₹${formatPrice(Math.round(price / 12))}/mo billed annually`
+                                                : "Billed monthly"
+                                    }
                                 </div>
 
-                                {/* Right: Price + CTA */}
-                                <div style={{ minWidth: '220px', textAlign: 'center', background: 'rgba(255,255,255,0.07)', borderRadius: '16px', padding: '2rem', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)' }}>
-                                    {lifetimePlan.is_founding_available && (
-                                        <div style={{ textDecoration: 'line-through', color: '#a78bfa', fontSize: '18px', marginBottom: '4px' }}>
-                                            ₹{lifetimePlan.standard_price?.toLocaleString('en-IN') || '24,999'}
+                                {/* Key Limits Chips */}
+                                <div className="sp-key-limits">
+                                    {getKeyLimits(plan).map((l, i) => (
+                                        <div key={i} className="sp-limit-chip">
+                                            <span className="icon">{l.icon}</span> {l.text}
                                         </div>
-                                    )}
-                                    <div style={{ fontSize: '3rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>
-                                        ₹{lifetimePlan.current_price?.toLocaleString('en-IN') || '19,999'}
+                                    ))}
+                                </div>
+
+                                {/* CTA */}
+                                <button
+                                    className={`sp-cta-btn ${isEnterprise ? "sales" : isPopular ? "primary" : "outline"}`}
+                                    onClick={() => handleChoosePlan(plan)}
+                                >
+                                    {isTrial ? "🎁 Start Free Trial" : isEnterprise ? "📞 Contact Sales" : `Choose ${plan.name}`}
+                                </button>
+
+                                {/* View Features */}
+                                <button
+                                    className="sp-features-link"
+                                    onClick={() => { setModalPlan(plan); setShowModal(true); }}
+                                >
+                                    View all features →
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Compare All Plans */}
+                <div className="sp-compare-row">
+                    {/* <button className="sp-compare-btn" onClick={() => { setModalPlan(null); setShowModal(true); }}>
+                        📊 Compare All Plans
+                    </button> */}
+                </div>
+            </div>
+
+            {/* ── Lifetime Access Premium Section ── */}
+            {lifetimePlan && (
+                <div className="sp-lifetime-section">
+                    <div className="sp-lifetime-card">
+                        <div className="sp-lifetime-badge">💎 Best Long-Term Value</div>
+
+                        <div className="sp-lifetime-header">
+                            <div className="sp-lifetime-info">
+                                <h2>Lifetime Access</h2>
+                                <p>Pay once. Use forever. No recurring charges — ever.</p>
+
+                                <div className="sp-lifetime-perks">
+                                    <span>✅ Unlimited students & faculty</span>
+                                    <span>✅ All premium features forever</span>
+                                    <span>✅ Full finance & salary module</span>
+                                    <span>✅ Priority 24/7 support</span>
+                                    <span>✅ Custom subdomain</span>
+                                    <span>✅ Free future updates</span>
+                                </div>
+                            </div>
+
+                            <div className="sp-lifetime-price-box">
+                                {lifetimePlan.is_founding_available && (
+                                    <div style={{ textDecoration: "line-through", color: "#a78bfa", fontSize: "1rem", marginBottom: 4 }}>
+                                        ₹{lifetimePlan.standard_price?.toLocaleString("en-IN") || "24,999"}
                                     </div>
-                                    <div style={{ color: '#c4b5fd', fontSize: '14px', marginBottom: '6px' }}>one-time payment</div>
-                                    {lifetimePlan.is_founding_available && (
-                                        <div style={{ background: '#f59e0b', color: '#000', borderRadius: '8px', padding: '6px', fontSize: '12px', fontWeight: 700, marginBottom: '16px' }}>
-                                            🌟 FOUNDING PRICE — Save ₹{((lifetimePlan.standard_price || 24999) - lifetimePlan.current_price).toLocaleString('en-IN')}
-                                        </div>
-                                    )}
-                                    <button
-                                        id="btn-get-lifetime-access"
-                                        onClick={handleChooseLifetime}
-                                        style={{
-                                            width: '100%',
-                                            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                                            color: '#000',
-                                            fontWeight: 800,
-                                            fontSize: '16px',
-                                            padding: '14px 24px',
-                                            borderRadius: '12px',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            boxShadow: '0 8px 24px rgba(245,158,11,0.4)',
-                                            transition: 'transform 0.2s, box-shadow 0.2s',
-                                            letterSpacing: '0.3px'
-                                        }}
-                                        onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(245,158,11,0.5)'; }}
-                                        onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(245,158,11,0.4)'; }}
-                                    >
-                                        💎 Get Lifetime Access
-                                    </button>
-                                    <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '10px' }}>
-                                        🔒 Secure payment via Razorpay
+                                )}
+                                <div className="sp-lifetime-price">
+                                    ₹{lifetimePlan.current_price?.toLocaleString("en-IN") || "19,999"}
+                                </div>
+                                <div className="sp-lifetime-label">One-time payment</div>
+
+                                {lifetimePlan.slots_remaining != null && (
+                                    <div style={{ fontSize: "0.78rem", color: "#fca5a5", marginBottom: 12, fontWeight: 600 }}>
+                                        ⚡ Only {lifetimePlan.slots_remaining} slots left!
                                     </div>
+                                )}
+
+                                <button className="sp-lifetime-cta" onClick={handleChooseLifetime}>
+                                    💎 Get Lifetime Access
+                                </button>
+                                <div style={{ color: "#9ca3af", fontSize: "0.72rem", marginTop: 8 }}>
+                                    🔒 Secure payment via Razorpay
                                 </div>
                             </div>
                         </div>
                     </div>
-                </section>
+                </div>
             )}
 
-            {/* Plans Grid */}
-            <section className="plans-section">
-                <div className="container">
-                    {lifetimePlan && (
-                        <h2 style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '1.4rem', color: 'var(--text-secondary, #6b7280)' }}>
-                            Or choose a subscription plan:
-                        </h2>
-                    )}
-                    {plans.length === 0 ? (
-                        <div className="no-plans">
-                            <p>No plans available at the moment. Please contact us for custom pricing.</p>
-                            <Link to="/contact" className="btn-primary">Contact Sales</Link>
-                        </div>
-                    ) : (
-                        <div className="plans-grid">
-                            {plans.map((plan) => (
-                                <div
-                                    key={plan.id}
-                                    className={`plan-card ${plan.is_popular ? 'popular' : ''}`}
-                                >
-                                    {plan.is_popular && <div className="popular-badge">Most Popular</div>}
+            {/* ── Feature Comparison Modal ── */}
+            {showModal && (
+                <div className="sp-modal-overlay" onClick={() => setShowModal(false)}>
+                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                        <button className="sp-modal-close" onClick={() => setShowModal(false)}>✕</button>
 
-                                    <div className="plan-header">
-                                        <h3 className="plan-name">{plan.name}</h3>
-                                        <div className="plan-price">
-                                            <span className="currency">₹</span>
-                                            <span className="amount">
-                                                {billingCycle === "yearly"
-                                                    ? Math.floor(plan.price * 12 * 0.8)
-                                                    : plan.price}
-                                            </span>
-                                            <span className="period">
-                                                /{billingCycle === "yearly" ? "year" : "month"}
-                                            </span>
-                                        </div>
-                                        <p className="plan-description">{plan.description}</p>
-                                    </div>
+                        <h2>{modalPlan ? `${modalPlan.name} — Features` : "Compare All Plans"}</h2>
 
-                                    <div className="plan-features">
-                                        <ul>
-                                            {getPlanFeatures(plan).map((feature, index) => (
-                                                <li key={index}>
-                                                    <span className="check-icon">✓</span>
-                                                    {feature}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-
-                                    <div className="plan-cta">
-                                        {isEnterprisePlan(plan) ? (
-                                            <Link to="/contact" className="btn-outline">
-                                                Contact Sales
-                                            </Link>
+                        <div style={{ overflowX: "auto" }}>
+                            <table className="sp-compare-table">
+                                <thead>
+                                    <tr>
+                                        <th>Feature</th>
+                                        {modalPlan ? (
+                                            <th>{modalPlan.name}</th>
                                         ) : (
-                                            <button
-                                                className={`btn-plan ${plan.is_popular ? 'btn-primary' : 'btn-outline'}`}
-                                                onClick={() => handleChoosePlan(plan.id)}
-                                            >
-                                                Choose {plan.name}
-                                            </button>
+                                            filteredPlans.map(p => <th key={p.id}>{p.name}</th>)
                                         )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </section>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {COMPARISON_FEATURES.map((feat, idx) => {
+                                        if (feat.section) {
+                                            return (
+                                                <tr key={idx} className="section-row">
+                                                    <td colSpan={modalPlan ? 2 : filteredPlans.length + 1}>{feat.section}</td>
+                                                </tr>
+                                            );
+                                        }
 
-            {/* FAQ Section */}
-            <section className="faq-section">
-                <div className="container">
-                    <h2 className="section-title">Frequently Asked Questions</h2>
-                    <div className="faq-grid">
-                        <div className="faq-item">
-                            <h3>Can I change my plan later?</h3>
-                            <p>Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.</p>
-                        </div>
-                        <div className="faq-item">
-                            <h3>Is there a free trial?</h3>
-                            <p>Yes, all plans come with a 14-day free trial. No credit card required.</p>
-                        </div>
-                        <div className="faq-item">
-                            <h3>What payment methods do you accept?</h3>
-                            <p>We accept all major credit/debit cards, UPI, net banking, and digital wallets.</p>
-                        </div>
-                        <div className="faq-item">
-                            <h3>What does Lifetime Access include?</h3>
-                            <p>Lifetime Access gives you all features forever with unlimited students & faculty — no monthly fees, ever. Founding member spots are limited.</p>
-                        </div>
-                        <div className="faq-item">
-                            <h3>Is my data secure?</h3>
-                            <p>Absolutely! We use bank-level encryption and automated backups to keep your data safe.</p>
-                        </div>
-                        <div className="faq-item">
-                            <h3>Is lifetime access really forever?</h3>
-                            <p>Yes. A one-time payment gives you access to all current and future features with no hidden renewal charges.</p>
+                                        const renderVal = (plan) => {
+                                            const val = plan[feat.key];
+                                            if (feat.bool) {
+                                                return val ? <span className="sp-check">✓</span> : <span className="sp-cross">—</span>;
+                                            }
+                                            if (feat.format) return feat.format(val);
+                                            return val != null ? String(val) : "—";
+                                        };
+
+                                        return (
+                                            <tr key={idx}>
+                                                <td className="feature-name">{feat.label}</td>
+                                                {modalPlan ? (
+                                                    <td>{renderVal(modalPlan)}</td>
+                                                ) : (
+                                                    filteredPlans.map(p => <td key={p.id}>{renderVal(p)}</td>)
+                                                )}
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* ── FAQ Section ── */}
+            <section className="sp-faq">
+                <h2>Frequently Asked Questions</h2>
+                {FAQS.map((item, i) => (
+                    <div key={i} className="sp-faq-item">
+                        <button className="sp-faq-q" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+                            {item.q}
+                            <span className={`arrow ${openFaq === i ? "open" : ""}`}>▼</span>
+                        </button>
+                        {openFaq === i && <div className="sp-faq-a">{item.a}</div>}
+                    </div>
+                ))}
             </section>
 
-            {/* CTA Section */}
-            <section className="pricing-cta-section">
-                <div className="container">
-                    <h2>Still have questions?</h2>
-                    <p>Our team is here to help you choose the right plan</p>
-                    <Link to="/contact" className="btn-primary-large">Contact Us</Link>
-                </div>
+            {/* ── Final CTA ── */}
+            <section style={{ textAlign: "center", padding: "2rem 1.5rem 4rem" }}>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "#fff", marginBottom: 8 }}>Still have questions?</h2>
+                <p style={{ color: "#94a3b8", marginBottom: 20 }}>Our team is here to help you choose the right plan</p>
+                <Link
+                    to="/contact"
+                    style={{
+                        display: "inline-block",
+                        padding: "12px 32px",
+                        background: "linear-gradient(135deg, #6366f1, #818cf8)",
+                        color: "#fff",
+                        borderRadius: 12,
+                        fontWeight: 700,
+                        textDecoration: "none",
+                        transition: "all 0.25s",
+                    }}
+                >
+                    Contact Us
+                </Link>
             </section>
 
-            {/* Footer */}
+            {/* ── Footer ── */}
             <footer className="public-footer">
                 <div className="container">
                     <div className="footer-grid">

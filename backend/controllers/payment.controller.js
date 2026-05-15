@@ -3,6 +3,17 @@ const paymentService = require("../services/payment.service");
 const invoiceService = require("../services/invoice.service");
 
 const getPlanAmountForCycle = (plan, billingCycle = "monthly") => {
+    if (plan.is_lifetime) {
+        const used = plan.lifetime_slots_used || 0;
+        const total = plan.lifetime_slots_total || 100;
+        // If slots are available and lifetime_price is set, use offer price
+        if (used < total && plan.lifetime_price !== null && plan.lifetime_price !== undefined) {
+            return Number(plan.lifetime_price);
+        }
+        // Otherwise use standard lifetime price
+        return Number(plan.price);
+    }
+
     if (billingCycle === "yearly") {
         if (plan.yearly_price !== null && plan.yearly_price !== undefined) {
             return Number(plan.yearly_price);
@@ -209,8 +220,11 @@ exports.verifyPayment = async (req, res) => {
         const final_paid = amount + tax_amount;
 
         const startDate = new Date();
-        const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + durationMonths);
+        let endDate = null;
+        if (!plan.is_lifetime) {
+            endDate = new Date();
+            endDate.setMonth(endDate.getMonth() + durationMonths);
+        }
 
         // Generate Invoice Number
         const invoiceNumber = `INV-${new Date().getFullYear()}-${instituteId}-${String(Date.now()).slice(-4)}`;
@@ -275,6 +289,7 @@ exports.verifyPayment = async (req, res) => {
                 subscription_end: endDate,
                 trial_ends_at: null,
                 grace_period_ends_at: null,
+                ...(plan.is_lifetime ? { is_lifetime_member: true, lifetime_purchased_at: new Date(), lifetime_plan_id: planId, founding_member: (plan.lifetime_slots_used || 0) < (plan.lifetime_slots_total || 100) } : {}),
                 ...getPlanSnapshot(plan, billingCycle || "monthly")
             },
             { where: { id: instituteId } }
@@ -285,6 +300,10 @@ exports.verifyPayment = async (req, res) => {
             message: "Payment successful and subscription activated",
             data: { redirect: "/admin/dashboard", subscription_end: endDate }
         });
+
+        if (plan.is_lifetime) {
+            await plan.increment("lifetime_slots_used");
+        }
 
     } catch (error) {
         console.error("Payment verification error:", error);

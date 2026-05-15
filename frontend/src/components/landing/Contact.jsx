@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 export default function Contact() {
   useScrollReveal('reveal', 0.1);
@@ -11,10 +12,9 @@ export default function Contact() {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : (import.meta.env.DEV ? 'http://localhost:5000' : 'https://institutes-saas.onrender.com')}/api/plans`);
-        const data = await response.json();
-        if (data.success || data.data) {
-          setPlans(data.data || []);
+        const response = await api.get('/plans');
+        if (response.data.success || response.data.data) {
+          setPlans(response.data.data || []);
         }
       } catch (error) {
         console.error('Failed to fetch plans for contact form', error);
@@ -42,22 +42,16 @@ export default function Contact() {
         message: formData.get('message')
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : (import.meta.env.DEV ? 'http://localhost:5000' : 'https://institutes-saas.onrender.com')}/api/leads`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+      const response = await api.post('/leads', data);
 
-      const resData = await response.json();
-
-      if (resData.success) {
-        toast.success(resData.message || 'Message sent! We will contact you within 24 hours.');
+      if (response.data.success) {
+        toast.success(response.data.message || 'Message sent! We will contact you within 24 hours.');
         e.target.reset();
       } else {
-        toast.error(resData.message || 'Failed to send message. Please try again.');
+        toast.error(response.data.message || 'Failed to send message. Please try again.');
       }
     } catch (err) {
-      toast.error('An error occurred. Please try again later.');
+      toast.error(err.response?.data?.message || 'An error occurred. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -142,6 +136,7 @@ export default function Contact() {
                     <option>Basic</option>
                     <option>Professional</option>
                     <option>Enterprise</option>
+                    <option>Lifetime</option>
                   </>
                 )}
               </select>

@@ -13,7 +13,7 @@ import '../../styles/landing.css';
 export default function Home() {
   useCursor(); // Custom lag cursor effect
 
-  // Progress Bar logic
+  // Scroll progress bar
   useEffect(() => {
     const update = () => {
       const scrolled = window.scrollY;
@@ -25,18 +25,25 @@ export default function Home() {
     window.addEventListener('scroll', update, { passive: true });
     return () => window.removeEventListener('scroll', update);
   }, []);
+
+  // Scroll to the right section based on the URL path or hash
   useEffect(() => {
     const p = window.location.pathname;
-    if (p === '/pricing' || p === '/renew-plan') {
+    const hash = window.location.hash.replace('#', '');
+    const sectionMap = {
+      '/pricing': 'pricing',
+      '/renew-plan': 'pricing',
+      '/features': 'features',
+      '/terms': 'terms',
+      '/privacy': 'privacy',
+    };
+
+    const sectionId = hash || sectionMap[p];
+    if (sectionId) {
       setTimeout(() => {
-        const el = document.getElementById('pricing');
-        if (el) window.scrollTo({ top: el.offsetTop - 80, behavior: 'smooth' });
-      }, 300);
-    } else if (p === '/features') {
-      setTimeout(() => {
-        const el = document.getElementById('features');
-        if (el) window.scrollTo({ top: el.offsetTop - 80, behavior: 'smooth' });
-      }, 300);
+        const el = document.getElementById(sectionId);
+        if (el) window.scrollTo({ top: el.offsetTop - 72, behavior: 'smooth' });
+      }, 400);
     }
   }, []);
 
@@ -45,9 +52,10 @@ export default function Home() {
       <div id='progress-bar' />
       <div id='cursor' />
       <div id='cursor-ring' />
+      <div id='mobile-drawer-root' />
 
       <Navbar />
-      
+
       <main>
         <Hero />
         <Features />
@@ -55,6 +63,7 @@ export default function Home() {
         <Testimonials />
         <FAQ />
         <Contact />
+
       </main>
 
       <Footer />

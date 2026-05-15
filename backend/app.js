@@ -118,6 +118,7 @@ const otpLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Too many OTP attempts — please wait 15 minutes before trying again." },
+  skip: (req) => req.ip === "127.0.0.1" || req.ip === "::1", // Don't limit localhost during dev
 });
 app.use("/api/auth/register-init", otpLimiter);
 app.use("/api/auth/verify-registration", otpLimiter);

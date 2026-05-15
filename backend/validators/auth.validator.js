@@ -23,7 +23,8 @@ const registerInit = {
             .messages({ "string.pattern.base": "Phone must be 10-15 digits" }),
         password: Joi.string().min(6).max(100).required()
             .messages({ "string.min": "Password must be at least 6 characters" }),
-        admin_name: Joi.string().min(2).max(100).required().trim(),
+        admin_name: Joi.string().min(2).max(100).optional().trim(),
+        testMode: Joi.boolean().optional(),
         address: Joi.string().max(500).optional().allow(""),
         city: Joi.string().max(100).optional().allow(""),
         state: Joi.string().max(100).optional().allow(""),
@@ -40,7 +41,7 @@ const verifyRegistration = {
         name: Joi.string().min(2).max(100).required().trim(),
         phone: Joi.string().pattern(/^[0-9]{10,15}$/).required(),
         password: Joi.string().min(6).max(100).required(),
-        admin_name: Joi.string().min(2).max(100).required().trim(),
+        admin_name: Joi.string().min(2).max(100).optional().trim(),
         address: Joi.string().max(500).optional().allow(""),
         city: Joi.string().max(100).optional().allow(""),
         state: Joi.string().max(100).optional().allow(""),

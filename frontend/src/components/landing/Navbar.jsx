@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import zfLogo from '../../assets/zf-logo.png';
 
 const NAV_LINKS = [
@@ -29,7 +30,7 @@ function MobileDrawer({ onClose, scrollTo, onLoginClick }) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  return (
+  return createPortal(
     <>
       <div className='lp-drawer-overlay' onClick={onClose} />
       <aside className='lp-mobile-drawer'>
@@ -51,8 +52,9 @@ function MobileDrawer({ onClose, scrollTo, onLoginClick }) {
           </button>
           <Link to='/register?plan=free_trial' className='lp-btn-primary'>Get Started Free</Link>
         </div>
-      </aside>
-    </>
+          </aside>
+    </>,
+    document.getElementById('mobile-drawer-root') || document.body
   );
 }
 

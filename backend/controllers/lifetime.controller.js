@@ -65,8 +65,11 @@ exports.getLifetimePlanInfo = async (req, res) => {
         }
 
         const slotsRemaining = plan.lifetime_slots_total - plan.lifetime_slots_used;
-        const isFoundingAvailable = plan.lifetime_slots_used < 50;
-        const currentPrice = isFoundingAvailable ? 19999 : Number(plan.lifetime_price || 24999);
+        const isFoundingAvailable = plan.lifetime_slots_used < (plan.lifetime_slots_total || 100);
+        
+        // Treat lifetime_price as the offer price and price as the standard price
+        const currentPrice = Number(plan.lifetime_price || 19999);
+        const standardPrice = Number(plan.price || 39999);
 
         return res.status(200).json({
             success: true,
@@ -74,8 +77,8 @@ exports.getLifetimePlanInfo = async (req, res) => {
                 ...plan.toJSON(),
                 slots_remaining: slotsRemaining,
                 is_founding_available: isFoundingAvailable,
-                founding_price: 19999,
-                standard_price: Number(plan.lifetime_price || 24999),
+                founding_price: currentPrice,
+                standard_price: standardPrice,
                 current_price: currentPrice,
             }
         });
@@ -112,8 +115,8 @@ exports.createLifetimeOrder = async (req, res) => {
         }
 
         const slotsRemaining = lifetimePlan.lifetime_slots_total - lifetimePlan.lifetime_slots_used;
-        const isFoundingMember = lifetimePlan.lifetime_slots_used < 50;
-        const price = isFoundingMember ? 19999 : Number(lifetimePlan.lifetime_price || 24999);
+        const isFoundingMember = lifetimePlan.lifetime_slots_used < (lifetimePlan.lifetime_slots_total || 100);
+        const price = Number(lifetimePlan.lifetime_price || 19999);
 
         const razorpay = getRazorpay();
         const order = await razorpay.orders.create({
@@ -172,7 +175,7 @@ exports.verifyLifetimePayment = async (req, res) => {
         const lifetimePlan = await Plan.findOne({ where: { is_lifetime: true } });
         if (!lifetimePlan) return res.status(404).json({ success: false, message: 'Lifetime plan not found.' });
 
-        const isFoundingMember = lifetimePlan.lifetime_slots_used < 50;
+        const isFoundingMember = lifetimePlan.lifetime_slots_used < (lifetimePlan.lifetime_slots_total || 100);
 
         // Activate lifetime access + unlock all features + set unlimited limits
         await institute.update({

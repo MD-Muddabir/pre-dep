@@ -343,7 +343,7 @@ function Plans() {
                                         </div>
 
                                         <div className="form-group">
-                                            <label className="form-label">Price (₹ / month)</label>
+                                            <label className="form-label">{formData.is_lifetime ? "Standard Price (Crossed Out ₹)" : "Price (₹ / month)"}</label>
                                             <input
                                                 type="number"
                                                 name="price"
@@ -445,7 +445,7 @@ function Plans() {
                                         {formData.is_lifetime && (
                                             <>
                                                 <div className="limit-input-group">
-                                                    <label>💎 Lifetime Price (₹)</label>
+                                                    <label>💎 Offer Price (₹)</label>
                                                     <input
                                                         type="number"
                                                         name="lifetime_price"
